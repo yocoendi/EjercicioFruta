@@ -1,25 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Button, Text, View, FlatList, ScrollView, Image, TextInput, Alert, RefreshControl } from 'react-native';
+import { StyleSheet, Button, Text, View, FlatList, ScrollView, RefreshControl, Image, TextInput, NativeModules, Alert } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-
 
 const Separator = () => (
   <View style={styles.separator} />
 )
 
-
-
-const url = "http://192.168.0.17:8080/fruits/"
+const url = "http://10.88.4.15:8080/fruits/"
 
 function HomeScreen() {
- 
+
   const [data, setData] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [imagen, setImagen] = useState(null);
-  
+
 
   useEffect(() => {
     setLoading(true)
@@ -40,28 +36,33 @@ function HomeScreen() {
     }, 2000);
   }, []);
 
+  const subirImagen = (nombre) => {
+    const imgs = {
+      Uvas: "https://frutasolivar.com/wp-content/uploads/2020/05/40010140_s.jpg",
+      Piña: "https://www.65ymas.com/uploads/s1/48/35/18/bigstock-whole-pineapple-and-pineapple-382336442_1_621x621.jpeg",
+      Manzana: "https://www.recetasnestlecam.com/sites/default/files/2022-04/tipos-de-manzana-royal-gala.jpg",
+      Melocoton: "https://img.freepik.com/fotos-premium/frutas-melocoton-rebanada-hojas-verdes-aisladas_80510-572.jpg",
+      sinimagen: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQNK7-n-r_w_qCEIjsnu8VXMBamUkSmLUr9Eg&usqp=CAU"
+    }
+    return (
+      imgs[nombre] ?? imgs.sinimagen
+    )
+  }
+
   const printElement = ({ item }) => {
 
-        
-
-
     return (
-
-      <ScrollView>
-        <Text style={styles.text}>Id: {item.id}</Text>
-        <Text style={styles.text}>Name: {item.name}</Text>
-        <Text style={styles.text}>Price: {item.price} €</Text>
-        <Image style={styles.imagen} source ={{uri: 
-        item.name==='Piña'?'https://www.65ymas.com/uploads/s1/48/35/18/bigstock-whole-pineapple-and-pineapple-382336442_1_621x621.jpeg':
-        item.name==='Manzana'?'https://www.recetasnestlecam.com/sites/default/files/2022-04/tipos-de-manzana-royal-gala.jpg': 
-        item.name==='Melocotón'?'https://img.freepik.com/fotos-premium/frutas-melocoton-rebanada-hojas-verdes-aisladas_80510-572.jpg':
-        item.name==='Uvas'?'https://frutasolivar.com/wp-content/uploads/2020/05/40010140_s.jpg':
-        item.name==='Kiwi'?'http://www.frutas-hortalizas.com/img/fruites_verdures/presentacio/14.jpg':
-        item.name==='Naranja'?'https://jlsupervia.es/wp-content/uploads/2020/03/pasta-aroma-naranja.jpg':
-        item.name==='Plátano'?'https://cdn.shopify.com/s/files/1/0492/2458/1274/products/8095c14d-a4df-456e-89ab-429175ac02f1_1024x1024.png?v=1622197543':
-        item.name==='Pera'?'https://thumbs.dreamstime.com/b/fruta-amarilla-de-la-pera-con-la-hoja-aislada-en-blanco-51277144.jpg':null}}></Image>
-
-      </ScrollView>
+      <View style={{ margin: 10, padding: 10, borderWidth: 1, borderColor: "gray" }}>
+        <Text style={styles.text}>{item.id}:Nombre: {item.name}Precio: {item.price}€ </Text>
+        <Image style={styles.imagen} source={{ uri: subirImagen(item.name) }}></Image>
+        <Button
+          onPress={() => {
+            BorrarFruta(item.id)
+            NativeModules.DevSettings.reload()
+          }}
+          title={"BORRAR FRUTA"}
+        />
+      </View>
 
     )
   }
@@ -71,7 +72,7 @@ function HomeScreen() {
       data={data}
       renderItem={printElement}
       refreshControl={
-      <RefreshControl refreshing={refreshing} onRefresh={onRefresh}/>
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     />
 
@@ -79,7 +80,20 @@ function HomeScreen() {
 }
 
 function SettingsScreen() {
-  const [form, setForm] = useState({ id: 0, name: "", price: ""})
+  const [form, setForm] = useState({ id: 0, name: "", price: "" })
+  const [errorPrice, setErrorPrice] = useState("")
+
+  const checkNumero = (value) => {
+
+    const reg = /^[0-9]+(\.[0-9]+)?$/;
+    if (!reg.test(value)) {
+      setErrorPrice(<Text style={styles.error}>error, introduce un número</Text>)
+    } else {
+      setErrorPrice("")
+    }
+    setForm({ ...form, price: value })
+
+  }
 
   return (
     <View style={styles.botones}>
@@ -92,22 +106,15 @@ function SettingsScreen() {
       <Text style={styles.title}>
         Fruit Price:
       </Text>
-      <TextInput placeholder='Por favor introduzca el precio de la fruta' onChangeText={value => setForm({ ...form, price: value })} value={form.price} style={styles.input} />
+      <TextInput placeholder='Por favor introduzca el precio de la fruta' onChangeText={value => checkNumero(value)} value={form.price} style={styles.input} />
+      <Text>{errorPrice}</Text>
       <Separator />
       <Button
         onPress={() => {
           SubirFruta(form);
-      
+          NativeModules.DevSettings.reload()
         }}
-        title={"SUBIR FRUTA"}
-      />
-      <Separator />
-      <TextInput placeholder='Introduzca el id que desea borrar'onChangeText={value => setForm({ ...form, id: value })} value={form.id} style={styles.input} />
-      <Button
-        onPress={() => {
-          BorrarFruta(form.id);
-        }}
-        title={"BORRAR FRUTA"}
+        title={"AÑADIR FRUTA"}
       />
     </View>
   )
@@ -124,9 +131,9 @@ function SubirFruta(data) {
     }
   })
     .then(response => response.json())
-    alert('Successfully created')
+  alert('Successfully created')
 
-    
+
 }
 
 function BorrarFruta(id) {
@@ -134,10 +141,10 @@ function BorrarFruta(id) {
   fetch(url + id, {
     method: 'DELETE'
   })
-  .then(response => response.json())
-  .catch(e => console.log(e))
+    .then(response => response.json())
+    .catch(e => console.log(e))
   alert('Deleted successfully')
- 
+
 }
 
 const Tab = createBottomTabNavigator();
@@ -152,7 +159,7 @@ export default function App() {
             let iconName;
             if (route.name === 'Mercado') {
               iconName = focused ? 'home' : 'home-outline';
-            } else if (route.name === 'Fruta') {
+            } else if (route.name === 'Añadir Fruta') {
               iconName = focused ? 'nutrition' : 'nutrition-outline';
             }
             return <Ionicons name={iconName} size={size} color={color} />;
@@ -162,7 +169,7 @@ export default function App() {
         })}
       >
         <Tab.Screen name="Mercado" component={HomeScreen} />
-        <Tab.Screen name="Fruta" component={SettingsScreen} />
+        <Tab.Screen name="Añadir Fruta" component={SettingsScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );
@@ -174,7 +181,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    
+
   },
   botones: {
     paddingTop: 90,
@@ -191,7 +198,6 @@ const styles = StyleSheet.create({
   imagen: {
     width: '100%',
     height: 300,
-   
   },
   texto: {
     color: 'white',
@@ -205,8 +211,10 @@ const styles = StyleSheet.create({
   },
   title: {
     textAlign: 'left',
-
-    
-
+  },
+  error: {
+    color: 'red'
   }
+
+
 })
